@@ -1,0 +1,16 @@
+{
+    "name": "fine/app",
+    "type": "fine-module",
+    "license": "MIT",
+    "require": {
+        "fine/composer": "*",
+        "fine/container": "*",
+        "fine/event": "*"
+    },
+    "autoload": {
+        "psr-4": { "Fine\\App\\": "src" }
+    },
+    "extra": {
+        "fine-module": {"name": "app", "class": "Fine\\App\\Module\\Module"}
+    }
+}
