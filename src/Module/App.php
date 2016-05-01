@@ -10,7 +10,7 @@ class App
 
     public function httpkernel($app)
     {
-        // security listeners
+        // DigestAuthentication(['user' => 'pass'])
 
         // add locale
 
