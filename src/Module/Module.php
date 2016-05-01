@@ -2,59 +2,75 @@
 
 namespace App\Module;
 
+use Fine\Application\HttpKernel;
 use \Fine\Event;
+use \Fine\Container\Container;
+use \Psr\Http\Message\ServerRequestInterface;
+use \Psr\Http\Message\ResponseInterface;
 
 require __DIR__ . '/global.php';
 
-class Module extends \Fine\Application\ModuleAbstract
+class Module
 {
+
+    protected $app;
+    protected $httpkernel;
 
     public function register($app)
     {
+        $this->app = $app;
 
         $app(array(
-
             'db' =>  function() use ($app) {
-                $target = $app->target->current;
-                $app->db = \Fine\Db\MySQL\Client::newInstace();
-                $app->module->each()->app->db();
-                return $app->db;
+                return $app->db = $app->mod->app->db;
             },
-
-            'config' => function() use ($app) {
-                return $app->config = \Fine\Config\Config::newInstace()->path('module/App/config');
-            },
-
-            'dispatcher' => function() use ($app) {
-                /** @todo */
-            },
-
-            'request' => function() use ($app) {
-                return $app->request = \Fine\Controller\Request::newFromGlobals();
-            },
-
-            'response' => function() use ($app) {
-                return $app->response = new \Fine\Controller\Response();
-            },
-
             'router' => function() use ($app) {
+                return $app->router = $app->mod->app->router;
             },
-
         ));
 
-        $app->event->on('application.bootstrap', array($this, 'bootstrap'));
-
+        $app->event->on('bootstrap', array($this, 'bootstrap'));
     }
 
     public function bootstrap(Event $event)
     {
+        $this->httpkernel($this->request)->send();
+    }
 
+    public function httpkernel(RequestInterface $request, ResponseInterface $response = null)
+    {
+        if ($this->httpkernel === null) {
+            $this->httpkernel = true;
+            $this->app->mod->hook()->app->httpkernel($this->app);
+        }
 
-        // $request = Request::capture();
-        //
-        // $response = $this->kernel->handle();
+        if ($response === null) {
+            $response = $this->response;
+        }
 
+        return $this->app->event
+            ->run(
+                (new Event())
+                    ->setId('app.httpkernel')
+                    ->setRequest($request)
+                    ->setResponse($response)
+            )
+            ->getResponse();
+    }
+
+    protected function _hook()
+    {
+        return $this->hook = new Container(array('__invoke' => array(
+            'app'    => '\Fine\App\Module\App',
+        )));
+    }
+    protected function _request()
+    {
 
     }
 
+    protected function _response()
+    {
+
+    }
 }
