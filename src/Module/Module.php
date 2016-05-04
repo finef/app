@@ -13,56 +13,43 @@ require __DIR__ . '/global.php';
 class Module
 {
 
-    protected $app;
-    protected $httpkernel;
+    protected $fine;
 
-    public function register($app)
+    public function register($fine)
     {
-        $this->app = $app;
+        $this->fine = $fine;
 
-        $app(array(
-            'db' =>  function() use ($app) {
-                return $app->db = $app->mod->app->db;
+        $fine([
+            'db' => function() use ($fine) {
+                return $fine->db = $fine->mod->app->db;
             },
-            'router' => function() use ($app) {
-                return $app->router = $app->mod->app->router;
+            'router' => function() use ($fine) {
+                return $fine->router = $fine->mod->app->router;
             },
-        ));
+        ]);
 
-        $app->event->on('bootstrap', array($this, 'bootstrap'));
+        $fine->event->on('bootstrap', array($this, 'bootstrap'));
     }
 
     public function bootstrap(Event $event)
     {
-        $this->httpkernel($this->request)->send();
+        $this->httpkernel($this->request, $this->response)->send();
     }
 
-    public function httpkernel(RequestInterface $request, ResponseInterface $response = null)
+    public function _httpkernel()
     {
-        if ($this->httpkernel === null) {
-            $this->httpkernel = true;
-            $this->app->mod->hook()->app->httpkernel($this->app);
-        }
+        $this->fine->mod->hook()->fine->httpkernel($this->fine);
 
-        if ($response === null) {
-            $response = $this->response;
-        }
-
-        return $this->app->event
-            ->run(
-                (new Event())
-                    ->setId('app.httpkernel')
-                    ->setRequest($request)
-                    ->setResponse($response)
-            )
-            ->getResponse();
-    }
+        return $this->httpkernel = (new HttpKernel())->defineEvent(function() {
+            return (new Event())->setId('app.kernel')->setDispatcher($this->fine->event);
+        });
+ }
 
     protected function _hook()
     {
-        return $this->hook = new Container(array('__invoke' => array(
-            'app'    => '\Fine\App\Module\App',
-        )));
+        return $this->hook = (new Container())->__invoke([
+            'app' => '\Fine\App\Module\App',
+        ]);
     }
     protected function _request()
     {

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Module;
+namespace Fine\App\Module;
 
 use \Fine\Db\ClientInterface;
 use \Fine\Db\Table;
