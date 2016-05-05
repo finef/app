@@ -28,29 +28,30 @@ class Module
             },
         ]);
 
-        $fine->event->on('bootstrap', array($this, 'bootstrap'));
+        $fine->event->on('bootstrap', [$this, 'bootstrap']);
     }
 
     public function bootstrap(Event $event)
     {
         $this->httpkernel($this->request, $this->response)->send();
     }
-
-    public function _httpkernel()
+    
+    protected function _mod()
     {
-        $this->fine->mod->hook()->fine->httpkernel($this->fine);
-
-        return $this->httpkernel = (new HttpKernel())->defineEvent(function() {
-            return (new Event())->setId('app.kernel')->setDispatcher($this->fine->event);
-        });
- }
-
-    protected function _hook()
-    {
-        return $this->hook = (new Container())->__invoke([
+        return $this->mod = (new Container())->__invoke([
             'app' => '\Fine\App\Module\App',
         ]);
     }
+    
+    protected function _httpkernel()
+    {
+        $this->fine->mod->each()->app->httpkernel($this->fine->event);
+
+        return $this->httpkernel = (new HttpKernel())->defineEvent(function() {
+            return (new Event())->setFine($this->fine)->setId('app.kernel')->setDispatcher($this->fine->event);
+        });
+ }
+
     protected function _request()
     {
 
