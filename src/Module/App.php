@@ -14,8 +14,9 @@ class App
             ->on('app.httpkernel', [$this, 'onHttpkernelRouter'], 100)
             ->on('app.httpkernel', [$this, 'onHttpkernelControllerResolve'], 150)
             ->on('app.httpkernel', [$this, 'onHttpkernelCreateController'], 200)
-            ->on('app.httpkernel', [$this, 'onHttpkernelEventAware'], 300)
-            ->on('app.httpkernel', [$this, 'onHttpkernelDispatchController'], 400);
+            ->on('app.httpkernel', [$this, 'onHttpkernelInjectServices'], 300)
+            ->on('app.httpkernel', [$this, 'onHttpkernelDispatchController'], 400)
+        ;
         
     }
     
@@ -23,6 +24,8 @@ class App
     {
         $result = $event->getFine()->getRouter->resolve($event->getRequest());
 
+        $event->getRequest()->addAttributes($result->getParams());
+        
         $event->setRouteResult($result);
 
         if ($result->hasClass()) {
@@ -52,13 +55,21 @@ class App
         $event->setController(new $event->getControllerClass());
     }
 
-    public function onHttpkernelEventAware(Event $event)
+    public function onHttpkernelInjectServices(Event $event)
     {
-        if (!$event->getController() instanceof HttpKernelEventAwareInterface) {
-            return;
+        $controller = $event->getController();
+        
+        if ($controller instanceof HttpKernelEventAwareInterface) {
+            $controller->setHttpkernelEvent($event);
         }
         
-        $event->getController()->setHttpkernelEvent($event);
+        if ($controller instanceof ContainerAwareInterface) {
+            $controller->setContainer($event->getContainer());
+        }
+        
+        if ($controller instanceof FineAwareInterface) {
+            $controller->setFine($event->getFine());
+        }
     }
     
     public function onHttpkernelDispatchController(Event $event)
