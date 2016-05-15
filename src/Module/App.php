@@ -2,18 +2,41 @@
 
 namespace Fine\App\Module;
 
-use \Fine\Event\Event;
-use \Fine\Event\EventDispatcher;
+use Fine\Container\Container;
+use Fine\Event\Event;
+use Fine\Event\EventDispatcher;
 
 class App
 {
+    
+    protected $_fine;
 
+    public function setFine($fine)
+    {
+        $this->_fine = $fine;
+        return $this;
+    }
+
+    public function controllerGroup(Container $groups)
+    {
+        $fine = $this->_fine;
+        $groups['app'] = function () use ($fine, $groups) {
+            return $groups->app = $fine->mod->each()->app->controller(new Container());
+        };
+    }
+    
+    public function controller(Container $controllers)
+    {
+        $controllers([
+           'index' => 'Fine\App\Front\Controller\IndexController',
+        ]);
+    }
+    
     public function httpkernel(EventDispatcher $dispatcher)
     {
         $dispatcher
             ->on('app.httpkernel', [$this, 'onHttpkernelRouter'], 100)
-            ->on('app.httpkernel', [$this, 'onHttpkernelControllerResolve'], 150)
-            ->on('app.httpkernel', [$this, 'onHttpkernelCreateController'], 200)
+            ->on('app.httpkernel', [$this, 'onHttpkernelGetController'], 200)
             ->on('app.httpkernel', [$this, 'onHttpkernelInjectServices'], 300)
             ->on('app.httpkernel', [$this, 'onHttpkernelDispatchController'], 400)
         ;
@@ -33,28 +56,19 @@ class App
         }
     }
     
-    public function onHttpkernelControllerResolve(Event $event)
+    public function onHttpkernelGetController(Event $event)
     {
-        if ($event->hasControllerClass() || !$event->hasRouteResult()) {
-            return;
+        $module = $event->getRouteResult()->getParam('module');
+        $controller = $event->getRouteResult()->getParam('controller');
+        $controllers = $event->fine->mod->app->controller;
+        
+        if (!isset($controllers->$module) || !isset($controllers->$module->$controller)) {
+            throw new Http404NotFoundException();
         }
         
-        $event->setControllerClass(
-            $event->getFine()->getMod()->getApp()->getControllerResolver()->resolve(
-                $event->getRouteResult()->getParam('module'), $event->getRouteResult()->getParam('controller')
-            )
-        );
+        $event->setController($controllers->$module->$controller);
     }
     
-    public function onHttpkernelCreateController(Event $event)
-    {
-        if ($event->hasController()) {
-            return;
-        }
-        
-        $event->setController(new $event->getControllerClass());
-    }
-
     public function onHttpkernelInjectServices(Event $event)
     {
         $controller = $event->getController();

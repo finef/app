@@ -13,20 +13,11 @@ require __DIR__ . '/global.php';
 class Module
 {
 
-    protected $fine;
+    protected $_fine;
 
-    public function register($fine)
+    public function register($_fine)
     {
         $this->fine = $fine;
-
-        $fine([
-            'db' => function() use ($fine) {
-                return $fine->db = $fine->mod->app->db;
-            },
-            'router' => function() use ($fine) {
-                return $fine->router = $fine->mod->app->router;
-            },
-        ]);
 
         $fine->event->on('bootstrap', [$this, 'bootstrap']);
     }
@@ -38,19 +29,26 @@ class Module
     
     protected function _mod()
     {
-        return $this->mod = (new Container())->__invoke([
-            'app' => '\Fine\App\Module\App',
+        $fine = $this->_fine;
+        $mod = new Container();
+        
+        $mod([
+            'app' => function () use ($mod, $fine) {
+                return $mod->app = (new Fine\App\Module\App())->setFine($fine);
+            },
         ]);
+            
+        return $this->mod = $mod;
     }
     
     protected function _httpkernel()
     {
-        $this->fine->mod->each()->app->httpkernel($this->fine->event);
+        $this->_fine->mod->each()->app->httpkernel($this->_fine->event);
 
         return $this->httpkernel = (new HttpKernel())->defineEvent(function() {
-            return (new Event())->setFine($this->fine)->setId('app.kernel')->setDispatcher($this->fine->event);
+            return (new Event())->setFine($this->_fine)->setId('app.kernel')->setDispatcher($this->_fine->event);
         });
- }
+    }
 
     protected function _request()
     {
@@ -61,4 +59,12 @@ class Module
     {
 
     }
+    
+    protected function _controller()
+    {
+        $this->controller = new Container();
+        $this->fine->mod->each()->app->controllerGroup($this->controller);
+        return $this->controller;
+    }
+    
 }
