@@ -6,11 +6,11 @@ use Fine\Container\Container;
 use Fine\Event\Event;
 use Fine\Event\EventDispatcher;
 
-class App
+class App implements FineAwareInterface
 {
     
-    protected $_fine;
-
+    use FineAwareTrait;
+    
     public function setFine($fine)
     {
         $this->_fine = $fine;
@@ -36,7 +36,7 @@ class App
     {
         $dispatcher
             ->on('app.httpkernel', [$this, 'onHttpkernelRouter'], 100)
-            ->on('app.httpkernel', [$this, 'onHttpkernelGetController'], 200)
+            ->on('app.httpkernel', [$this, 'onHttpkernelResolveController'], 200)
             ->on('app.httpkernel', [$this, 'onHttpkernelInjectServices'], 300)
             ->on('app.httpkernel', [$this, 'onHttpkernelDispatchController'], 400)
         ;
@@ -56,7 +56,7 @@ class App
         }
     }
     
-    public function onHttpkernelGetController(Event $event)
+    public function onHttpkernelResolveController(Event $event)
     {
         $module = $event->getRouteResult()->getParam('module');
         $controller = $event->getRouteResult()->getParam('controller');
@@ -78,7 +78,10 @@ class App
         }
         
         if ($controller instanceof ContainerAwareInterface) {
-            $controller->setContainer($event->getContainer());
+            $module = $event->getRouteResult()->getParam('module');
+            if (isset($event->getFine()->mod->$module)) {
+                $controller->setContainer($event->getFine()->mod->$module);
+            }
         }
         
         if ($controller instanceof FineAwareInterface) {

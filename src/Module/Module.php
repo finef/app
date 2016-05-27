@@ -3,50 +3,35 @@
 namespace App\Module;
 
 use Fine\Application\HttpKernel;
-use \Fine\Event;
-use \Fine\Container\Container;
-use \Psr\Http\Message\ServerRequestInterface;
-use \Psr\Http\Message\ResponseInterface;
+use Fine\Event;
+use Fine\Container\Container;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface;
 
 require __DIR__ . '/global.php';
 
-class Module
+class Module implements FineAwareInterface
 {
 
-    protected $_fine;
-
-    public function register($_fine)
-    {
-        $this->fine = $fine;
-
-        $fine->event->on('bootstrap', [$this, 'bootstrap']);
-    }
-
-    public function bootstrap(Event $event)
-    {
-        $this->httpkernel($this->request, $this->response)->send();
-    }
+    use FineAwareTrait;
+    use FineDistributeTrait;
     
-    protected function _mod()
+    protected function _hook()
     {
-        $fine = $this->_fine;
-        $mod = new Container();
-        
-        $mod([
-            'app' => function () use ($mod, $fine) {
-                return $mod->app = (new Fine\App\Module\App())->setFine($fine);
-            },
+        return $this->hook = (new FineContainer())->__invoke([
+            'app' => Fine\App\Module\App::class,
+            'fine' => Fine\App\Module\Fine::class,
         ]);
-            
-        return $this->mod = $mod;
     }
     
     protected function _httpkernel()
     {
-        $this->_fine->mod->each()->app->httpkernel($this->_fine->event);
+        $fine = $this->_fine;
+        
+        $fine->mod->hook()->app->httpkernel($fine->event);
 
-        return $this->httpkernel = (new HttpKernel())->defineEvent(function() {
-            return (new Event())->setFine($this->_fine)->setId('app.kernel')->setDispatcher($this->_fine->event);
+        return $this->httpkernel = (new HttpKernel())->setEventFactory(function() use ($fine) {
+            return (new Event())->setFine($fine)->setId('app.httpkernel')->setDispatcher($fine->event);
         });
     }
 
@@ -62,9 +47,17 @@ class Module
     
     protected function _controller()
     {
-        $this->controller = new Container();
-        $this->fine->mod->each()->app->controllerGroup($this->controller);
-        return $this->controller;
+        return $this->_fine->mod->hook()->app->controllerGroup(new Container());
+    }
+    
+    protected function _view()
+    {
+        return $this->view = $this->_fine->mod->hook()->app->view(new FineContainer());
+    }
+    
+    protected function _resourceResolver()
+    {
+//        return $this->
     }
     
 }
