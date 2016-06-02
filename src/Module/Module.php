@@ -52,10 +52,23 @@ class Module implements FineAwareInterface
     
     protected function _view()
     {
-        return $this->view = $this->_fine->mod->hook()->app->view(new FineContainer());
+        return $this->_fine->mod->hook()->app->view(new FineContainer());
     }
     
-    protected function _resourceResolver()
+    protected function _render()
+    {
+        
+        $fine = $this->_fine;
+        
+        $fine->mod->hook()->app->render($fine->event);
+        
+        return $this->render = (new Renderer())->setEventFactory(function() use ($fine) {
+            return (new Event())->setFine($fine)->setId('app.render')->setDispatcher($fine->event);
+        });
+    }
+
+
+    protected function _resource()
     {
 //        return $this->
     }
